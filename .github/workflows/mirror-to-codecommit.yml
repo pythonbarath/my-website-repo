@@ -1,0 +1,32 @@
+name: Mirror to CodeCommit
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CODECOMMIT_SSH_PRIVATE_KEY }}" > ~/.ssh/codecommit_rsa
+          chmod 600 ~/.ssh/codecommit_rsa
+          ssh-keyscan -t rsa git-codecommit.ap-south-1.amazonaws.com >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config << EOF
+          Host git-codecommit.*.amazonaws.com
+            User APKAZAHNKEYNPTUQHN2H
+            IdentityFile ~/.ssh/codecommit_rsa
+          EOF
+
+      - name: Push to CodeCommit
+        run: |
+          git remote add codecommit ssh://git-codecommit.ap-south-1.amazonaws.com/v1/repos/my-website-repo
+          git push codecommit main --force
